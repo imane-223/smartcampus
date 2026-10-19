@@ -96,4 +96,26 @@ class LoginServiceTest {
         service.login(STUDENT, "faux3");
         assertThat(log.calls).isZero();
     }
+
+        @Test
+    void failuresAreTrackedIndependentlyForEachUser() {
+        service.login(STUDENT, "faux1");
+        service.login(TEACHER, "faux1");
+        service.login(STUDENT, "faux2");
+        service.login(TEACHER, "faux2");
+
+        assertThat(log.calls).isZero();
+
+        service.login(STUDENT, "faux3");
+
+        assertThat(log.calls).isEqualTo(1);
+        assertThat(log.lastEmail).isEqualTo(STUDENT);
+        assertThat(log.lastCount).isEqualTo(3);
+
+        service.login(TEACHER, "faux3");
+
+        assertThat(log.calls).isEqualTo(2);
+        assertThat(log.lastEmail).isEqualTo(TEACHER);
+        assertThat(log.lastCount).isEqualTo(3);
+    }
 }
