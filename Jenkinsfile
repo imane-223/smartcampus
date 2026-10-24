@@ -2,10 +2,14 @@
 pipeline {
     agent any
 
+    options {
+        skipDefaultCheckout(true)
+    }
+
     stages {
         stage('Checkout') {
             steps {
-                echo 'Preparation du code source SmartCampus'
+                checkout scm
             }
         }
 
