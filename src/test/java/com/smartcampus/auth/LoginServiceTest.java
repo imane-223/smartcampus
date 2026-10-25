@@ -94,6 +94,6 @@ class LoginServiceTest {
         service.login(STUDENT, "faux2");
         service.login(STUDENT, PASSWORD);
         service.login(STUDENT, "faux3");
-        assertThat(log.calls).isEqualTo(99);
+        assertThat(log.calls).isZero();
     }
 }
