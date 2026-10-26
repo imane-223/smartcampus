@@ -15,14 +15,28 @@ pipeline {
 
         stage('Build') {
             steps {
-                bat 'mvnw.cmd -B -DskipTests clean package'
+                bat '''
+                    set "JAVA_HOME=C:\\Program Files\\Java\\jdk-21"
+                    set "PATH=%JAVA_HOME%\\bin;%PATH%"
+                    call mvnw.cmd -B clean package -DskipTests
+                '''
             }
         }
 
         stage('Test') {
             steps {
-                bat 'mvnw.cmd -B test'
+                bat '''
+                    set "JAVA_HOME=C:\\Program Files\\Java\\jdk-21"
+                    set "PATH=%JAVA_HOME%\\bin;%PATH%"
+                    call mvnw.cmd -B test
+                '''
             }
+        }
+    }
+
+    post {
+        success {
+            archiveArtifacts artifacts: 'target/*.jar', allowEmptyArchive: true, fingerprint: true
         }
     }
 }
