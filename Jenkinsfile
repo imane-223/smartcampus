@@ -1,4 +1,4 @@
-
+// TP Jenkins - verification du declenchement GitHub
 pipeline {
     agent any
 
