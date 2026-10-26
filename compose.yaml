@@ -1,0 +1,45 @@
+services:
+
+  db:
+    image: postgres:16-alpine
+    container_name: smartcampus-db
+    environment:
+      POSTGRES_DB: smartcampus
+      POSTGRES_USER: smartcampus
+      POSTGRES_PASSWORD: smartcampus
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smartcampus -d smartcampus"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  api:
+    image: smartcampus:1.0
+    build: .
+    container_name: smartcampus-api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: 8081
+      # Le service db est joignable par son nom DNS, pas par une adresse IP
+      DB_URL: jdbc:postgresql://db:5432/smartcampus
+      DB_USER: smartcampus
+      DB_PASSWORD: smartcampus
+    ports:
+      - "8090:8081"
+    volumes:
+      - app-data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8081/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  db-data:
+  app-data:
