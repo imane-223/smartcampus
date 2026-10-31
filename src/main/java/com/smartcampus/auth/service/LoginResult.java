@@ -1,4 +1,4 @@
-package com.smartcampus.auth;
+package com.smartcampus.auth.service;
 
 public enum LoginResult {
     SUCCESS("Connexion reussie"),
