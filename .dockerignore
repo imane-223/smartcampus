@@ -1,0 +1,8 @@
+.git
+.idea
+docs
+src
+.mvn
+mvnw
+mvnw.cmd
+*.md
