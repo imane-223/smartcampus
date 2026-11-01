@@ -118,3 +118,24 @@ describe('Session', () => {
     expect(screen.queryByText('Bonjour Sara Alaoui')).not.toBeInTheDocument()
   })
 })
+
+describe('Déconnexion', () => {
+  it('appelle POST /api/auth/logout avec le jeton CSRF et revient à /login', async () => {
+    let loggedIn = true
+    const api = fakeApi({
+      'GET /api/auth/me': () => (loggedIn ? { status: 200, body: SARA } : unauthorized('/api/auth/me')),
+      'POST /api/auth/logout': () => {
+        loggedIn = false
+        return { status: 204 }
+      },
+    })
+    renderAt('/')
+    await screen.findByRole('heading', { name: 'Bonjour Sara Alaoui' })
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Se déconnecter' }))
+
+    expect(await screen.findByRole('form', { name: 'Connexion à SmartCampus' })).toBeInTheDocument()
+    expect(headersOf(api, 'POST /api/auth/logout')['X-XSRF-TOKEN']).toBe('jeton+csrf')
+    expect(loggedIn).toBe(false)
+  })
+})

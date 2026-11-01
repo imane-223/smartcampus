@@ -7,6 +7,7 @@ export interface AuthState {
   /** true tant que la session n'a pas été vérifiée au chargement */
   loading: boolean
   login: (courriel: string, motDePasse: string) => Promise<User>
+  logout: () => Promise<void>
 }
 
 export const AuthContext = createContext<AuthState | null>(null)
