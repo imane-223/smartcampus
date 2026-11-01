@@ -6,7 +6,7 @@ Plateforme numérique de centralisation des services universitaires
 ## Stack technique
 
 - Java 21, Spring Boot 4.1, Maven
-- Spring Data JPA, Flyway, PostgreSQL 16
+- Spring Security 7 (session serveur, CSRF), Spring Data JPA, Flyway, PostgreSQL 16
 - Tests : JUnit 5, AssertJ, H2 en mémoire
 - CI : Jenkins
 - Versionnement : Git / GitHub
@@ -39,6 +39,51 @@ aucune base. Il faut lancer l'ensemble avec Compose :
     docker compose up -d --build
 
 L'API est alors accessible sur http://localhost:8090.
+
+## Comptes de démonstration
+
+Données fictives, créées au démarrage **uniquement** si la propriété
+`smartcampus.demo-data.enabled` vaut `true` (variable d'environnement
+`SMARTCAMPUS_DEMO_DATA_ENABLED`). Elle est **désactivée par défaut**, et ne doit
+jamais être activée en production : les mots de passe ci-dessous sont publics.
+
+- Le `compose.yaml` l'active pour la pile Docker locale.
+- En local, sans Docker : `SMARTCAMPUS_DEMO_DATA_ENABLED=true ./mvnw spring-boot:run`.
+- L'initialisation est idempotente : un compte déjà présent n'est ni recréé ni modifié.
+
+| Rôle | E-mail | Mot de passe | État |
+|---|---|---|---|
+| Étudiant | `etudiant@usms.ac.ma` | `Demo2026!` | actif |
+| Enseignant | `prof@usms.ma` | `Demo2026!` | actif |
+| Administrateur | `admin@ensakh.ma` | `Demo2026!` | actif |
+| Étudiant | `ancien@usms.ac.ma` | `Demo2026!` | désactivé |
+
+## Authentification (API)
+
+Session serveur et cookie `JSESSIONID`, protégés par un jeton CSRF (cookie
+`XSRF-TOKEN`, renvoyé dans l'en-tête `X-XSRF-TOKEN` sur chaque POST, PUT, PATCH et DELETE).
+
+| Méthode | URL | Accès | Réponse |
+|---|---|---|---|
+| GET | `/api/auth/csrf` | public | 200, pose le cookie `XSRF-TOKEN` |
+| POST | `/api/auth/login` | public + CSRF | 200 utilisateur, 401 `ErrorResponse`, 400 si champ vide |
+| GET | `/api/auth/me` | connecté | 200 utilisateur, sinon 401 |
+| GET | `/actuator/health` | public | 200 `UP` (healthcheck Docker) |
+
+Après 5 échecs consécutifs, un compte est verrouillé 15 minutes. Le message
+`ACCOUNT_LOCKED` n'apparaît que si le mot de passe saisi est correct, comme pour un
+compte désactivé : sinon, la réponse reste « E-mail ou mot de passe incorrect. ».
+
+Exemple avec curl, sur la pile Docker (port 8090) :
+
+    curl -c jar -b jar http://localhost:8090/api/auth/csrf
+    TOKEN=$(grep XSRF-TOKEN jar | awk '{print $7}')
+    curl -c jar -b jar -H "X-XSRF-TOKEN: $TOKEN" -H "Content-Type: application/json" \
+         -d '{"courriel":"etudiant@usms.ac.ma","motDePasse":"Demo2026!"}' \
+         http://localhost:8090/api/auth/login
+    curl -b jar http://localhost:8090/api/auth/me
+
+Le jeton CSRF change après la connexion : relisez-le dans `jar` avant le POST suivant.
 
 ## Tests
 

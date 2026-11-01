@@ -93,6 +93,12 @@ public class AuthService {
         return LoginOutcome.success(user);
     }
 
+    /** Utilisateur de la session, s'il existe toujours et reste actif. */
+    @Transactional(readOnly = true)
+    public Optional<Utilisateur> findActiveUser(Long id) {
+        return repository.findById(id).filter(Utilisateur::isActif);
+    }
+
     private void registerFailure(Utilisateur user, Instant now) {
         int count = user.getTentativesEchouees() + 1;
         user.setTentativesEchouees(count);
