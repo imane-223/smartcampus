@@ -1,4 +1,4 @@
-package com.smartcampus.auth;
+package com.smartcampus.auth.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -7,6 +7,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
+import com.smartcampus.auth.model.Role;
+import com.smartcampus.auth.model.User;
 
 class LoginServiceTest {
 

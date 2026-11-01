@@ -1,10 +1,13 @@
-package com.smartcampus.auth;
+package com.smartcampus.auth.service;
 
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
+
+import com.smartcampus.auth.model.Role;
+import com.smartcampus.auth.model.User;
 
 public class LoginService {
 
