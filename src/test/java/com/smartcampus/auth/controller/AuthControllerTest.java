@@ -219,4 +219,30 @@ class AuthControllerTest {
         mvc.perform(get("/api/auth/me").session(session)).andExpect(status().isUnauthorized());
         assertThat(session.isInvalid()).isTrue();
     }
+
+    // --- Déconnexion (SC1-3) ---
+
+    @Test
+    void logoutInvalidatesTheSession() throws Exception {
+        MockHttpSession session = (MockHttpSession) login("etudiant@usms.ac.ma", PASSWORD)
+                .getRequest().getSession(false);
+        mvc.perform(get("/api/auth/me").session(session)).andExpect(status().isOk());
+
+        mvc.perform(post("/api/auth/logout").session(session).with(RealCsrf.from(mvc)))
+                .andExpect(status().isNoContent());
+
+        assertThat(session.isInvalid()).isTrue();
+        mvc.perform(get("/api/auth/me").session(session)).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void logoutWithoutCsrfTokenIsRefused() throws Exception {
+        MockHttpSession session = (MockHttpSession) login("etudiant@usms.ac.ma", PASSWORD)
+                .getRequest().getSession(false);
+
+        mvc.perform(post("/api/auth/logout").session(session))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("CSRF"));
+        assertThat(session.isInvalid()).isFalse();
+    }
 }

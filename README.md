@@ -68,6 +68,7 @@ Session serveur et cookie `JSESSIONID`, protégés par un jeton CSRF (cookie
 | GET | `/api/auth/csrf` | public | 200, pose le cookie `XSRF-TOKEN` |
 | POST | `/api/auth/login` | public + CSRF | 200 utilisateur, 401 `ErrorResponse`, 400 si champ vide |
 | GET | `/api/auth/me` | connecté | 200 utilisateur, sinon 401 |
+| POST | `/api/auth/logout` | CSRF | 204, la session est invalidée |
 | GET | `/actuator/health` | public | 200 `UP` (healthcheck Docker) |
 
 Après 5 échecs consécutifs, un compte est verrouillé 15 minutes. Le message
