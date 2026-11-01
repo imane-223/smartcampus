@@ -21,4 +21,9 @@ public enum Role {
         }
         return email.toLowerCase().endsWith("@" + emailDomain);
     }
+
+    /** Autorité Spring Security correspondante : ROLE_STUDENT, ROLE_TEACHER, ROLE_ADMIN. */
+    public String authority() {
+        return "ROLE_" + name();
+    }
 }
