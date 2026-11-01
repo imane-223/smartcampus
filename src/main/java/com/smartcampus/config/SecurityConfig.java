@@ -9,6 +9,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -34,6 +35,7 @@ import tools.jackson.databind.ObjectMapper;
  * Publics : connexion, jeton CSRF et santé de l'actuator (healthcheck Docker). Tout le reste exige une session.
  */
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
     @Bean
@@ -45,6 +47,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/csrf").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        // Règles par préfixe (SC1-51) : premier filet. Chaque méthode précise ensuite
+                        // ses droits par @PreAuthorize (voir docs/conventions.md).
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/salles/**", "/api/reservations/**").authenticated()
                         .anyRequest().authenticated())
                 .cors(Customizer.withDefaults())
                 // spa() : gestionnaire adapté à un frontend JavaScript qui renvoie le cookie dans X-XSRF-TOKEN

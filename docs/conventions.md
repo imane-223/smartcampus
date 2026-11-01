@@ -108,9 +108,98 @@ Toutes les erreurs renvoient le même objet (`com.smartcampus.common.ErrorRespon
 ```
 
 - `error` : un code stable en majuscules, que le frontend peut tester
-  (`VALIDATION`, `NOT_FOUND`, `FORBIDDEN`, `CONFLICT`, `INVALID_CREDENTIALS`).
+  (`VALIDATION`, `UNAUTHORIZED`, `FORBIDDEN`, `CSRF`, `NOT_FOUND`, `CONFLICT`,
+  `INVALID_CREDENTIALS`, `ACCOUNT_DISABLED`, `ACCOUNT_LOCKED`).
 - `message` : en français, lisible par l'utilisateur.
-- `fields` : seulement pour les erreurs de validation.
+- `fields` : seulement pour les erreurs de validation (absent sinon).
+- `retryAt` : instant ISO-8601 (UTC) à partir duquel réessayer, quand il y en a un
+  (absent sinon). La réponse porte alors aussi l'en-tête HTTP `Retry-After` (en secondes).
+
+### Dates et heures dans les messages
+
+**Aucune heure locale dans un message produit par le serveur.** Les conteneurs
+tournent en UTC, les utilisateurs sont en Africa/Casablanca : une heure écrite par
+le serveur serait fausse. Le serveur donne soit une **durée relative**
+(« Réessayez dans 12 minutes. », arrondie à la minute supérieure), soit un
+**instant ISO-8601** dans un champ JSON (`retryAt`, `debut`, ...). C'est le frontend
+qui convertit l'instant dans le fuseau de l'utilisateur.
+
+## 6 bis. Sécuriser un endpoint
+
+Toute requête est authentifiée par défaut. Seuls sont publics : `POST /api/auth/login`,
+`GET /api/auth/csrf` et `/actuator/health`. **N'ajoutez aucune URL publique sans
+en parler à l'équipe.**
+
+Deux niveaux, toujours les deux :
+
+1. **Règle par préfixe** dans `config/SecurityConfig` : le premier filet, déjà en place.
+   - `/api/admin/**` → rôle ADMIN
+   - `/api/salles/**` et `/api/reservations/**` → utilisateur connecté
+2. **`@PreAuthorize` sur chaque méthode de contrôleur** : la règle précise. Si un
+   endpoint n'a pas d'annotation, la revue de code le refuse.
+
+Exemple complet (module `room`) :
+
+```java
+package com.smartcampus.room.controller;
+
+@RestController
+@RequestMapping("/api/salles")
+public class SalleController {
+
+    private final SalleService salleService;
+
+    public SalleController(SalleService salleService) {
+        this.salleService = salleService;
+    }
+
+    // Consultation : tout utilisateur connecté
+    @GetMapping
+    @PreAuthorize("isAuthenticated()")
+    public List<SalleResponse> lister(@RequestParam(required = false) TypeEspace type) {
+        return salleService.lister(type);
+    }
+
+    // Création : administrateur uniquement
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<SalleResponse> creer(@Valid @RequestBody SalleRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(salleService.creer(request));
+    }
+
+    // Utilisateur courant : jamais d'identifiant pris dans la requête pour « moi »
+    @PostMapping("/{id}/signalements")
+    @PreAuthorize("hasAnyRole('STUDENT', 'TEACHER')")
+    public SignalementResponse signaler(@PathVariable Long id, @Valid @RequestBody SignalementRequest request,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        return salleService.signaler(id, request, user.id());
+    }
+}
+```
+
+- Rôles : `hasRole('STUDENT')`, `hasRole('TEACHER')`, `hasRole('ADMIN')`. Les
+  autorités sont `ROLE_STUDENT`, `ROLE_TEACHER` et `ROLE_ADMIN`.
+- L'utilisateur connecté s'obtient par `@AuthenticationPrincipal AuthenticatedUser`
+  (`id`, `courriel`, `role`). C'est un résumé en session, pas l'entité : relisez la
+  base si vous avez besoin de plus.
+- Une règle qui dépend des données (« seulement ses propres réservations ») se
+  vérifie dans le **service**, pas seulement dans l'annotation (règle R13 : droits
+  vérifiés côté serveur à chaque requête).
+- Réponses : **401** `UNAUTHORIZED` sans session, **403** `FORBIDDEN` avec le mauvais
+  rôle, **403** `CSRF` si le jeton manque. Ces réponses sont produites par
+  `SecurityConfig` : ne les renvoyez pas à la main depuis un contrôleur.
+- **CSRF** : tout POST, PUT, PATCH ou DELETE doit porter l'en-tête `X-XSRF-TOKEN`
+  avec la valeur du cookie `XSRF-TOKEN` (le frontend l'obtient par `GET /api/auth/csrf`).
+  Le jeton change après la connexion.
+- **Tests** : pour un utilisateur connecté, placez un `SecurityContext` en session
+  (voir `AuthorizationTest.sessionAs`). Pour le jeton CSRF, utilisez
+  `com.smartcampus.support.RealCsrf.from(mvc)`. **N'utilisez pas `csrf()` de
+  spring-security-test** : il remplace durablement le dépôt CSRF du filtre et fausse
+  les tests suivants du même contexte. Chaque endpoint teste au moins : 401 sans
+  session, 403 avec un mauvais rôle, succès avec le bon rôle.
+- Cookie de session : `SameSite=Lax` suffit en développement (`localhost:5173` et
+  `localhost:8081` sont le même site, le port ne compte pas). **En production sur
+  deux domaines distincts, il faudra `SameSite=None` et `Secure`** (HTTPS obligatoire).
 
 ## 7. Langue
 
@@ -141,3 +230,10 @@ docker compose up -d db          # PostgreSQL 16 sur localhost:5432
   service ou lancez l'application avec `DB_URL` pointant vers un autre port.
 - Tests : profil `test` (`@ActiveProfiles("test")`) sur tout test qui charge un
   contexte Spring.
+- **Comptes de démonstration** : propriété `smartcampus.demo-data.enabled`
+  (variable `SMARTCAMPUS_DEMO_DATA_ENABLED`). **Désactivée par défaut**, et elle doit le
+  rester partout sauf en développement : les mots de passe de démonstration sont
+  publics (README). Le `compose.yaml` l'active pour la pile Docker locale. En local :
+  `SMARTCAMPUS_DEMO_DATA_ENABLED=true ./mvnw spring-boot:run`. Ne créez pas d'autre
+  mécanisme de données de démonstration : complétez `config/DataInitializer`, qui est
+  idempotent (il ne crée que ce qui manque).
