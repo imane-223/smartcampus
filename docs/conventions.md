@@ -201,6 +201,81 @@ public class SalleController {
   `localhost:8081` sont le même site, le port ne compte pas). **En production sur
   deux domaines distincts, il faudra `SameSite=None` et `Secure`** (HTTPS obligatoire).
 
+## 6 ter. Frontend (`frontend/`)
+
+React + Vite + TypeScript, react-router. Pas de framework CSS ni de bibliothèque
+de composants : styles dans `src/index.css`, à partir des variables `:root`.
+
+### Organisation
+
+```
+frontend/src/
+├── api/          client.ts (client HTTP unique) + un fichier par module : auth.ts, salles.ts...
+├── auth/         AuthProvider, useAuth (authState.ts), ProtectedRoute, libellés des rôles
+├── pages/        une page par fichier : LoginPage.tsx, HomePage.tsx, SallesPage.tsx...
+├── test/         setup.ts, faux backend fakeApi (api.ts)
+└── App.tsx       routes
+```
+
+Chaque membre ajoute `api/<module>.ts`, ses pages dans `pages/`, ses routes dans `App.tsx`.
+
+### Appeler l'API
+
+- **Toujours `apiFetch`** (`api/client.ts`), jamais `fetch` directement. Il ajoute
+  `credentials: 'include'` et l'en-tête CSRF sur POST, PUT, PATCH et DELETE. Il
+  transforme aussi toute erreur en `ApiError`, et signale une session expirée.
+- Les types TypeScript reprennent les DTO du backend, avec les mêmes noms de
+  champs : `User` ↔ `UserResponse`.
+
+  ```ts
+  // api/salles.ts
+  export interface Salle { id: number; code: string; nom: string; typeEspace: string; statut: string }
+
+  export function listerSalles(type?: string): Promise<Salle[]> {
+    return apiFetch<Salle[]>(type ? `/api/salles?type=${encodeURIComponent(type)}` : '/api/salles')
+  }
+
+  export function creerSalle(salle: Omit<Salle, 'id'>): Promise<Salle> {
+    return apiFetch<Salle>('/api/salles', { method: 'POST', body: salle })
+  }
+  ```
+- **CSRF** : rien à faire, `apiFetch` relit le cookie `XSRF-TOKEN` avant chaque
+  requête (il change après la connexion et la déconnexion), le décode avec
+  `decodeURIComponent`, et l'obtient par `GET /api/auth/csrf` s'il manque.
+- **Erreurs** : attrapez `ApiError` et affichez `error.message`, déjà en français.
+  `error.fields` donne le détail des champs en 400, et `error.code` le code stable
+  (`FORBIDDEN`, `CONFLICT`...) pour réagir sans comparer des textes.
+- **Session expirée** : tout 401 (sauf sur le login) efface l'utilisateur du
+  contexte, et `ProtectedRoute` renvoie vers `/login`. Ne gérez pas le 401 page par page.
+- **Dates** : le serveur envoie des instants ISO-8601 en UTC. Affichez-les dans le
+  fuseau du navigateur avec `Intl.DateTimeFormat('fr-MA', ...)`, et ne recalculez
+  jamais une heure à la main.
+
+### Pages
+
+- Une page protégée se place dans `<ProtectedRoute>` dans `App.tsx`. L'utilisateur
+  courant s'obtient par `useAuth().user`. Masquer un bouton selon le rôle ne
+  remplace pas le contrôle serveur (`@PreAuthorize`) : c'est seulement du confort.
+- **Formulaires** : un vrai `<form onSubmit>`, avec `event.preventDefault()`, jamais
+  un bouton `onClick`. La touche Entrée doit valider.
+  - Chaque champ a un `<label htmlFor>` et un `autoComplete` adapté.
+  - Le bouton est désactivé pendant l'envoi.
+  - L'erreur s'affiche dans un élément `role="alert"`.
+- **Accessibilité** : focus visible (déjà dans le CSS), contrastes suffisants,
+  titres `h1` puis `h2`, texte des boutons explicite.
+- Interface en français, avec les accents.
+
+### Tests
+
+- Vitest + Testing Library, fichier `*.test.tsx` à côté de la page.
+- Cherchez les éléments comme un utilisateur : `getByRole`, `getByLabelText`.
+  Évitez les sélecteurs CSS et les `data-testid`.
+- Simulez le backend avec `fakeApi` (`src/test/api.ts`) : clé `"MÉTHODE /chemin"`,
+  réponse `{ status, body }`. Aucun test n'appelle le vrai serveur.
+- Chaque page teste au moins : l'affichage, le cas d'erreur (message du serveur
+  dans l'alerte) et le cas nominal.
+- Avant chaque PR : `npm run test` et `npm run build` (Jenkins ne les lance pas encore).
+
 ## 7. Langue
 
 | Élément | Langue |
@@ -219,6 +294,7 @@ Prérequis : JDK 21, Docker.
 docker compose up -d db          # PostgreSQL 16 sur localhost:5432
 ./mvnw spring-boot:run           # application sur http://localhost:8081
 ./mvnw clean package             # build + tests (H2, sans PostgreSQL)
+cd frontend && npm install && npm run dev   # interface sur http://localhost:5173 (pile Docker requise)
 ```
 
 - Valeurs par défaut (développement uniquement) : base `smartcampus`, utilisateur

@@ -7,8 +7,9 @@ Plateforme numérique de centralisation des services universitaires
 
 - Java 21, Spring Boot 4.1, Maven
 - Spring Security 7 (session serveur, CSRF), Spring Data JPA, Flyway, PostgreSQL 16
-- Tests : JUnit 5, AssertJ, H2 en mémoire
-- CI : Jenkins
+- Frontend : React + Vite + TypeScript, react-router (dossier `frontend/`)
+- Tests : JUnit 5, AssertJ, H2 en mémoire ; Vitest + Testing Library pour le frontend
+- CI : Jenkins (backend uniquement, voir plus bas)
 - Versionnement : Git / GitHub
 
 ## Lancer le projet
@@ -39,6 +40,36 @@ aucune base. Il faut lancer l'ensemble avec Compose :
     docker compose up -d --build
 
 L'API est alors accessible sur http://localhost:8090.
+
+## Lancer le frontend
+
+Prérequis : Node.js 20 ou plus, et **le backend démarré** : par défaut, la pile
+Docker (`docker compose up -d`, API sur le port 8090, comptes de démonstration actifs).
+
+    cd frontend
+    npm install
+    npm run dev
+
+L'interface est sur http://localhost:5173. Connectez-vous avec un compte de
+démonstration (voir plus bas), par exemple `etudiant@usms.ac.ma` / `Demo2026!`.
+
+Vite relaie `/api` vers le backend (proxy) : le frontend et l'API partagent la même
+origine, donc ni CORS ni souci de cookie. Pour viser le backend lancé par
+`./mvnw spring-boot:run` (port 8081) plutôt que Docker :
+
+    VITE_API_TARGET=http://localhost:8081 npm run dev
+
+Le port 5173 doit être libre : Vite s'arrête plutôt que de prendre un autre port.
+
+Autres commandes, dans `frontend/` :
+
+    npm run test     # tests Vitest
+    npm run build    # vérification TypeScript + build de production dans dist/
+    npm run lint     # oxlint
+
+**Limite connue :** Jenkins n'a pas Node. Le frontend n'est donc ni construit ni
+testé par le pipeline : lancez `npm run test` et `npm run build` avant chaque PR.
+Intégrer le frontend au pipeline (et le conteneuriser) fera l'objet d'un ticket ultérieur.
 
 ## Comptes de démonstration
 
