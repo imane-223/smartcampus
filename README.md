@@ -43,21 +43,40 @@ L'API est alors accessible sur http://localhost:8090.
 
 ## Lancer le frontend
 
-Prérequis : Node.js 20 ou plus, et **le backend démarré** : par défaut, la pile
-Docker (`docker compose up -d`, API sur le port 8090, comptes de démonstration actifs).
+Prérequis : Node.js 20 ou plus, et **le backend démarré**.
 
+Vite relaie `/api` vers le backend (proxy) : le frontend et l'API partagent la même
+origine, donc ni CORS ni souci de cookie. La cible du proxy dépend de la façon dont
+l'API tourne :
+
+| API lancée par | Port de l'API | Avant `npm run dev` |
+|---|---|---|
+| `./mvnw spring-boot:run` (base seule en Docker) | 8081 | rien : c'est la cible par défaut |
+| `docker compose up -d` (pile complète) | 8090 | `VITE_API_TARGET=http://localhost:8090` |
+
+Les deux ports diffèrent parce que `compose.yaml` publie le port 8081 du conteneur
+sur le port **8090** de la machine. Changez donc la variable, jamais `vite.config.ts`.
+
+**API en local** (mode de développement courant) :
+
+    docker compose up -d db
+    SMARTCAMPUS_DEMO_DATA_ENABLED=true ./mvnw spring-boot:run
+    cd frontend && npm install && npm run dev
+
+**API en Docker** :
+
+    docker compose up -d
     cd frontend
-    npm install
+    VITE_API_TARGET=http://localhost:8090 npm run dev
+
+Sous PowerShell, définissez la variable avant de lancer Vite :
+
+    $env:VITE_API_TARGET="http://localhost:8090"
     npm run dev
 
 L'interface est sur http://localhost:5173. Connectez-vous avec un compte de
 démonstration (voir plus bas), par exemple `etudiant@usms.ac.ma` / `Demo2026!`.
-
-Vite relaie `/api` vers le backend (proxy) : le frontend et l'API partagent la même
-origine, donc ni CORS ni souci de cookie. Pour viser le backend lancé par
-`./mvnw spring-boot:run` (port 8081) plutôt que Docker :
-
-    VITE_API_TARGET=http://localhost:8081 npm run dev
+Si le proxy affiche `ECONNREFUSED`, c'est que l'API ne tourne pas sur le port visé.
 
 Le port 5173 doit être libre : Vite s'arrête plutôt que de prendre un autre port.
 

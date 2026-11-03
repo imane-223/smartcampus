@@ -288,14 +288,26 @@ Chaque membre ajoute `api/<module>.ts`, ses pages dans `pages/`, ses routes dans
 
 ## 8. Lancer le projet en local
 
-Prérequis : JDK 21, Docker.
+Prérequis : JDK 21, Docker, Node.js 20 ou plus.
 
 ```bash
 docker compose up -d db          # PostgreSQL 16 sur localhost:5432
-./mvnw spring-boot:run           # application sur http://localhost:8081
+./mvnw spring-boot:run           # API sur http://localhost:8081
 ./mvnw clean package             # build + tests (H2, sans PostgreSQL)
-cd frontend && npm install && npm run dev   # interface sur http://localhost:5173 (pile Docker requise)
+cd frontend && npm install && npm run dev   # interface sur http://localhost:5173
 ```
+
+**Cible du proxy Vite** (`/api`, variable `VITE_API_TARGET`) :
+
+- **API en local** (`./mvnw spring-boot:run`) : rien à faire, le proxy vise
+  `http://localhost:8081` par défaut. C'est le mode de développement courant :
+  base en Docker, API en Maven, frontend en Vite.
+- **API en Docker** (`docker compose up -d`) : définissez
+  `VITE_API_TARGET=http://localhost:8090` avant `npm run dev`. Sous PowerShell :
+  `$env:VITE_API_TARGET="http://localhost:8090"`.
+- Les ports diffèrent parce que `compose.yaml` publie le port 8081 du conteneur sur
+  le port 8090 de la machine. **Ne modifiez pas `vite.config.ts`** pour changer de
+  mode : utilisez la variable.
 
 - Valeurs par défaut (développement uniquement) : base `smartcampus`, utilisateur
   et mot de passe `smartcampus`. On les surcharge par les variables `DB_URL`,
