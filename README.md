@@ -26,9 +26,9 @@ chaque démarrage.
 
 Connexion à la base : variables `DB_URL`, `DB_USER` et `DB_PASSWORD`. Sans ces
 variables, l'application utilise les valeurs de développement du `compose.yaml`
-(`localhost:5432`, base, utilisateur et mot de passe `smartcampus`).
+(`localhost:5433`, base, utilisateur et mot de passe `smartcampus`).
 
-Le port 5432 doit être libre : arrêtez un éventuel PostgreSQL installé sur le poste.
+Le port 5433 est publié pour PostgreSQL Docker afin d'éviter les conflits avec un PostgreSQL local utilisant le port 5432.
 
 ### Avec Docker
 

@@ -216,7 +216,7 @@ public class SalleController {
 Prérequis : JDK 21, Docker.
 
 ```bash
-docker compose up -d db          # PostgreSQL 16 sur localhost:5432
+docker compose up -d db          # PostgreSQL 16 sur localhost:5433
 ./mvnw spring-boot:run           # application sur http://localhost:8081
 ./mvnw clean package             # build + tests (H2, sans PostgreSQL)
 ```
@@ -226,8 +226,8 @@ docker compose up -d db          # PostgreSQL 16 sur localhost:5432
   `DB_USER`, `DB_PASSWORD` et `SERVER_PORT`.
 - Si une variable `DB_PASSWORD` est déjà définie sur votre poste, elle remplace la
   valeur par défaut.
-- Si le port 5432 est déjà pris (PostgreSQL installé sur le poste), arrêtez ce
-  service ou lancez l'application avec `DB_URL` pointant vers un autre port.
+- PostgreSQL Docker est publié sur le port hôte 5433 pour éviter un conflit avec
+  un PostgreSQL local qui utilise le port 5432. L'application locale utilise aussi 5433.
 - Tests : profil `test` (`@ActiveProfiles("test")`) sur tout test qui charge un
   contexte Spring.
 - **Comptes de démonstration** : propriété `smartcampus.demo-data.enabled`
