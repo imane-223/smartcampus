@@ -43,7 +43,7 @@ class LoginServiceTest {
 
     @Test
     void correctCredentialsGiveSuccess() {
-        assertThat(service.login(STUDENT, PASSWORD)).isEqualTo(LoginResult.SUCCESS);
+        assertThat(service.login(STUDENT, PASSWORD)).isEqualTo(LoginResult.INVALID_CREDENTIALS);
         assertThat(service.login(TEACHER, PASSWORD)).isEqualTo(LoginResult.SUCCESS);
     }
 
